@@ -10,6 +10,7 @@ An autonomous system for managing Google Ad Manager operations, including invent
 - Campaign operations (orders, line items, creatives)
 - Reporting infrastructure
 - Advanced features and optimizations
+- STDIO interface for command-line operations
 
 ## Prerequisites
 
@@ -28,7 +29,7 @@ cd google-ad-manager-system
 2. Create and activate a virtual environment:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\\Scripts\\activate
 ```
 
 3. Install dependencies:
@@ -55,16 +56,109 @@ pip install -r requirements.txt
    - Ensure Redis is running
    - Update Redis configuration in `.env` if needed
 
-## Running the Application
+## Usage
 
-1. Start the server:
+### HTTP Server
+
+Run the HTTP server:
 ```bash
-python src/main.py
+uvicorn src.main:app --reload
 ```
 
-2. Access the API documentation:
-   - OpenAPI UI: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
+### STDIO Interface
+
+The system provides a STDIO interface for command-line operations. This allows you to interact with the server using standard input/output streams.
+
+#### Running the STDIO Server
+
+```bash
+python -m src.run_stdio_server
+```
+
+#### Making Requests
+
+The STDIO interface accepts JSON-encoded requests with the following format:
+```json
+{
+    "method": "GET|POST|PUT|DELETE",
+    "path": "/endpoint/path",
+    "body": {
+        "optional": "request body"
+    }
+}
+```
+
+Responses are returned in this format:
+```json
+{
+    "status": 200,
+    "headers": {
+        "content-type": "application/json"
+    },
+    "body": {
+        "response": "data"
+    }
+}
+```
+
+#### Example Operations
+
+1. Health Check:
+```bash
+echo '{"method": "GET", "path": "/health"}' | python -m src.run_stdio_server
+```
+
+2. Authentication:
+```bash
+echo '{
+    "method": "POST",
+    "path": "/auth/token",
+    "body": {
+        "client_id": "your_client_id",
+        "client_secret": "your_client_secret"
+    }
+}' | python -m src.run_stdio_server
+```
+
+3. Create Campaign:
+```bash
+echo '{
+    "method": "POST",
+    "path": "/campaigns",
+    "body": {
+        "name": "Test Campaign",
+        "advertiserId": "12345",
+        "startDate": "2024-03-20",
+        "endDate": "2024-04-20"
+    }
+}' | python -m src.run_stdio_server
+```
+
+4. Get Report:
+```bash
+echo '{
+    "method": "GET",
+    "path": "/reports/campaign-performance",
+    "body": {
+        "campaignId": "67890",
+        "dateRange": "LAST_7_DAYS"
+    }
+}' | python -m src.run_stdio_server
+```
+
+#### Using the Helper Script
+
+For convenience, you can use the provided helper script:
+
+```bash
+./scripts/mcp-cli.sh health  # Health check
+./scripts/mcp-cli.sh auth    # Authentication
+./scripts/mcp-cli.sh create-campaign '{"name": "Test"}' # Create campaign
+```
+
+## API Documentation
+
+Visit `/docs` or `/redoc` when running the HTTP server for complete API documentation.
 
 ## Testing
 
@@ -73,9 +167,11 @@ Run the test suite:
 pytest
 ```
 
-Run with coverage:
+Run specific test categories:
 ```bash
-pytest --cov=src tests/
+pytest src/tests/test_auth      # Auth tests
+pytest src/tests/test_campaigns # Campaign tests
+pytest src/tests/test_mcp      # MCP server tests
 ```
 
 ## Security Notes
