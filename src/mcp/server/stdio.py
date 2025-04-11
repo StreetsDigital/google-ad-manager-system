@@ -2,21 +2,25 @@
 STDIO interface for the MCP server.
 
 This module provides a command-line interface to interact with the MCP server
-through standard input/output streams.
+through standard input/output streams, compatible with Cursor's MCP protocol.
 """
 
 import sys
 import json
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-class StdioRequest(BaseModel):
-    """Request model for stdio communication."""
-    method: str
-    path: str
-    body: Optional[Dict[str, Any]] = None
+class MCPRequest(BaseModel):
+    """Request model for MCP communication."""
+    name: str = Field(..., description="Name of the function to call")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Function parameters")
+
+class MCPResponse(BaseModel):
+    """Response model for MCP communication."""
+    result: Any = Field(..., description="Result of the function call")
+    error: Optional[str] = Field(None, description="Error message if the call failed")
 
 class StdioServer:
     """STDIO interface for FastAPI server."""
@@ -31,83 +35,75 @@ class StdioServer:
         self.app = app
         self.loop = asyncio.get_event_loop()
 
-    async def handle_request(self, request: StdioRequest) -> Dict[str, Any]:
+    async def handle_request(self, request: MCPRequest) -> MCPResponse:
         """
-        Handle incoming request.
+        Handle incoming MCP request.
 
         Args:
-            request: Request data
+            request: MCP request data
 
         Returns:
-            Dict[str, Any]: Response data
+            MCPResponse: Response data
         """
-        # Create scope for ASGI request
-        scope = {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": request.method,
-            "path": request.path,
-            "raw_path": request.path.encode(),
-            "query_string": b"",
-            "headers": [(b"content-type", b"application/json")],
-            "client": ("127.0.0.1", 0),
-            "server": ("127.0.0.1", 0),
-        }
-
-        # Create response holder
-        response_data = {}
-        response_status = None
-        response_headers = None
-
-        # Define receive function
-        async def receive():
-            return {
-                "type": "http.request",
-                "body": json.dumps(request.body).encode() if request.body else b"",
-                "more_body": False,
+        try:
+            # Create scope for ASGI request
+            scope = {
+                "type": "http",
+                "asgi": {"version": "3.0"},
+                "http_version": "1.1",
+                "method": "POST",  # MCP always uses POST
+                "path": f"/mcp/{request.name}",
+                "raw_path": f"/mcp/{request.name}".encode(),
+                "query_string": b"",
+                "headers": [(b"content-type", b"application/json")],
+                "client": ("127.0.0.1", 0),
+                "server": ("127.0.0.1", 0),
             }
 
-        # Define send function
-        async def send(message):
-            nonlocal response_data, response_status, response_headers
-            if message["type"] == "http.response.start":
-                response_status = message["status"]
-                response_headers = message["headers"]
-            elif message["type"] == "http.response.body":
-                if message["body"]:
+            # Create response holder
+            response_data = None
+
+            # Define receive function
+            async def receive():
+                return {
+                    "type": "http.request",
+                    "body": json.dumps(request.parameters).encode(),
+                    "more_body": False,
+                }
+
+            # Define send function
+            async def send(message):
+                nonlocal response_data
+                if message["type"] == "http.response.body" and message["body"]:
                     response_data = json.loads(message["body"])
 
-        # Call ASGI application
-        await self.app(scope, receive, send)
+            # Call ASGI application
+            await self.app(scope, receive, send)
 
-        return {
-            "status": response_status,
-            "headers": dict(response_headers) if response_headers else {},
-            "body": response_data
-        }
+            return MCPResponse(result=response_data)
+        except Exception as e:
+            return MCPResponse(result=None, error=str(e))
 
     async def process_line(self, line: str) -> None:
         """
         Process a single line of input.
 
         Args:
-            line: Input line (JSON-encoded request)
+            line: Input line (JSON-encoded MCP request)
         """
         try:
             # Parse request
             data = json.loads(line)
-            request = StdioRequest(**data)
+            request = MCPRequest(**data)
 
             # Handle request
             response = await self.handle_request(request)
 
             # Send response
-            print(json.dumps(response), flush=True)
+            print(json.dumps(response.dict(exclude_none=True)), flush=True)
         except Exception as e:
             # Send error response
             print(json.dumps({
-                "status": 500,
                 "error": str(e)
             }), flush=True)
 
