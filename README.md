@@ -22,7 +22,7 @@ An autonomous system for managing Google Ad Manager operations, including invent
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/google-ad-manager-system.git
+git clone https://github.com/streetsdigital/google-ad-manager-system.git
 cd google-ad-manager-system
 ```
 
