@@ -1,0 +1,12 @@
+{
+    "web": {
+        "client_id": "your-client-id",
+        "client_secret": "your-client-secret",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "redirect_uris": [
+            "https://n8n-n8n.hacuux.easypanel.host/rest/oauth2-credential/callback",
+            "http://localhost:8080/oauth2/callback"
+        ]
+    }
+} 

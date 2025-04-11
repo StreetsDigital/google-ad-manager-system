@@ -1,0 +1,77 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Credentials
+client_config.json
+token.json
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Redis
+dump.rdb
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Dependency directories
+node_modules/
+
+# Editor directories and files
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Task files
+tasks.json
+tasks/ 
